@@ -22,7 +22,7 @@
 #define CFG_BINDS \
     /* Application launchers */ \
     { MODKEY,                XK_Return, 0, { .cmd = build_argv("kitty") },                                            TYPE_CMD  }, \
-    { MODKEY,                XK_w,      0, { .cmd = build_argv("surf $HOMEPAGE") },                                   TYPE_CMD  }, \
+    { MODKEY,                XK_w,      0, { .cmd = build_argv("surf git.bance.dev") },                               TYPE_CMD  }, \
     { MODKEY,                XK_space,  0, { .cmd = build_argv("dmenu_run") },                                        TYPE_CMD  }, \
     { MODKEY,                XK_equal,  0, { .cmd = build_argv("pactl set-sink-volume @DEFAULT_SINK@ +5%") },         TYPE_CMD  }, \
     { MODKEY,                XK_minus,  0, { .cmd = build_argv("pactl set-sink-volume @DEFAULT_SINK@ -5%") },         TYPE_CMD  }, \
