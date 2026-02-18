@@ -33,7 +33,7 @@ Then just add tilite to your `.xinitrc` and you're good to go. You could also ma
 
 ## Configuration
 
-All configuration of tilite is done at compile time in the config.h header. The config on this repo is my personal one but I'll probably add more generic ones in the future.
+All configuration of tilite is done at compile time in the config.h header.
 
 ## Thanks & Inspiration
 
