@@ -1,5 +1,5 @@
 <p align="center">
-  <img width="256" height=auto src="https://github.com/BanceDev/tilite/blob/main/logo.png">
+  <img width="256" height=auto src="logo.png">
   <br/>
   <img src="https://img.shields.io/github/contributors/bancedev/tilite" alt="contributors">
   <img src="https://img.shields.io/github/license/bancedev/tilite" alt="license">
