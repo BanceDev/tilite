@@ -158,9 +158,6 @@ static void load_config(void) {
 	user_config.modkey = MODKEY;
 	user_config.gaps = CFG_GAPS;
 	user_config.border_width = CFG_BORDER_WIDTH;
-	user_config.master_width = CFG_MASTER_WIDTH;
-	user_config.resize_master_amt = CFG_RESIZE_MASTER_AMT;
-	user_config.resize_stack_amt = CFG_RESIZE_STACK_AMT;
 	user_config.move_window_amt = CFG_MOVE_WINDOW_AMT;
 	user_config.resize_window_amt = CFG_RESIZE_WINDOW_AMT;
 	user_config.snap_distance = CFG_SNAP_DISTANCE;
@@ -168,7 +165,6 @@ static void load_config(void) {
 	user_config.new_win_focus = CFG_NEW_WIN_FOCUS;
 	user_config.warp_cursor = CFG_WARP_CURSOR;
 	user_config.floating_on_top = CFG_FLOATING_ON_TOP;
-	user_config.new_win_master = CFG_NEW_WIN_MASTER;
 
 	/* colours — parse_col needs dpy to be open, so call after XOpenDisplay */
 	user_config.border_foc_col = parse_col(CFG_FOCUSED_BORDER_COL);
@@ -196,16 +192,16 @@ client_t *add_client(Window w, int ws) {
 
 	if (!workspaces[ws]) {
 		workspaces[ws] = c;
+	} else if (focused && focused->ws == ws) {
+		/* Insert after focused so the new window splits the focused slot */
+		c->next = focused->next;
+		focused->next = c;
 	} else {
-		if (user_config.new_win_master) {
-			c->next = workspaces[ws];
-			workspaces[ws] = c;
-		} else {
-			client_t *tail = workspaces[ws];
-			while (tail->next)
-				tail = tail->next;
-			tail->next = c;
-		}
+		/* Fallback: append to tail */
+		client_t *tail = workspaces[ws];
+		while (tail->next)
+			tail = tail->next;
+		tail->next = c;
 	}
 	open_windows++;
 
@@ -236,7 +232,6 @@ client_t *add_client(Window w, int ws) {
 	c->floating = False;
 	c->fullscreen = False;
 	c->mapped = True;
-	c->custom_stack_height = 0;
 
 	if (global_floating)
 		c->floating = True;
@@ -1159,16 +1154,11 @@ void init_defaults(void) {
 	user_config.move_window_amt = 10;
 	user_config.resize_window_amt = 10;
 
-	user_config.master_width = 50 / 100.0f;
-
 	user_config.motion_throttle = 60;
-	user_config.resize_master_amt = 5;
-	user_config.resize_stack_amt = 20;
 	user_config.snap_distance = 5;
 	user_config.n_binds = 0;
 	user_config.new_win_focus = True;
 	user_config.warp_cursor = True;
-	user_config.new_win_master = False;
 	user_config.floating_on_top = True;
 }
 
@@ -1210,58 +1200,66 @@ Bool is_child_proc(pid_t parent_pid, pid_t child_pid) {
 	return False;
 }
 
-void move_master_next(void) {
-	if (!workspaces[current_ws] || !workspaces[current_ws]->next)
-		return;
-
-	client_t *first = workspaces[current_ws];
-	client_t *old_focused = focused;
-
-	workspaces[current_ws] = first->next;
-	first->next = NULL;
-
-	client_t *tail = workspaces[current_ws];
-	while (tail->next)
-		tail = tail->next;
-
-	tail->next = first;
-
-	tile();
-
-	if (user_config.warp_cursor && old_focused)
-		warp_cursor(old_focused);
-
-	if (old_focused)
-		send_wm_take_focus(old_focused->win);
-
-	update_borders();
-}
-
-void move_master_prev(void) {
-	if (!workspaces[current_ws] || !workspaces[current_ws]->next)
+void move_focused_next(void) {
+	if (!focused || !workspaces[current_ws])
 		return;
 
 	client_t *prev = NULL;
-	client_t *cur = workspaces[current_ws];
-	client_t *old_focused = focused;
-
-	while (cur->next) {
-		prev = cur;
-		cur = cur->next;
+	client_t *c = workspaces[current_ws];
+	while (c && c != focused) {
+		prev = c;
+		c = c->next;
 	}
+	if (!c || !c->next)
+		return;
 
+	client_t *next = c->next;
+
+	c->next = next->next;
+	next->next = c;
 	if (prev)
-		prev->next = NULL;
-
-	cur->next = workspaces[current_ws];
-	workspaces[current_ws] = cur;
+		prev->next = next;
+	else
+		workspaces[current_ws] = next;
 
 	tile();
-	if (user_config.warp_cursor && old_focused)
-		warp_cursor(old_focused);
-	if (old_focused)
-		send_wm_take_focus(old_focused->win);
+	if (user_config.warp_cursor)
+		warp_cursor(focused);
+	send_wm_take_focus(focused->win);
+	update_borders();
+}
 
+void move_focused_prev(void) {
+	if (!focused || !workspaces[current_ws])
+		return;
+
+	client_t *prev = NULL;
+	client_t *c = workspaces[current_ws];
+	while (c && c != focused) {
+		prev = c;
+		c = c->next;
+	}
+	if (!c || !prev)
+		return;
+
+	client_t *prev_prev = NULL;
+	client_t *p = workspaces[current_ws];
+	while (p && p != prev) {
+		prev_prev = p;
+		p = p->next;
+	}
+
+	prev->next = c->next;
+	c->next = prev;
+	if (prev_prev)
+		prev_prev->next = c;
+	else
+		workspaces[current_ws] = c;
+
+	tile();
+	if (user_config.warp_cursor)
+		warp_cursor(focused);
+	send_wm_take_focus(focused->win);
 	update_borders();
 }
 
@@ -1391,82 +1389,6 @@ void quit(void) {
 	XCloseDisplay(dpy);
 	puts("quitting...");
 	running = False;
-}
-
-void resize_master_add(void) {
-	float *mw = &user_config.master_width;
-
-	if (*mw < MF_MAX - 0.001f)
-		*mw += ((float)user_config.resize_master_amt / 100);
-
-	tile();
-	update_borders();
-}
-
-void resize_master_sub(void) {
-	float *mw = &user_config.master_width;
-
-	if (*mw > MF_MIN + 0.001f)
-		*mw -= ((float)user_config.resize_master_amt / 100);
-
-	tile();
-	update_borders();
-}
-
-void resize_stack_add(void) {
-	if (!focused || focused->floating || focused == workspaces[current_ws])
-		return;
-
-	int bw2 = 2 * user_config.border_width;
-	int raw_cur = (focused->custom_stack_height > 0)
-					  ? focused->custom_stack_height
-					  : (focused->h + bw2);
-
-	int raw_new = raw_cur + user_config.resize_stack_amt;
-
-	/* Calculate maximum allowed height to prevent extending off-screen */
-	int gaps = user_config.gaps;
-	int tile_height = MAX(1, scr_height - 2 * gaps);
-
-	/* Count stack windows (excluding master) */
-	int n_stack = 0;
-	for (client_t *c = workspaces[current_ws]; c; c = c->next) {
-		if (c->mapped && !c->floating && !c->fullscreen &&
-			c != workspaces[current_ws])
-			n_stack++;
-	}
-
-	/* Maximum height: tile_height minus space for other stack windows
-	 * (min_height + gap each) */
-	int min_stack_height = bw2 + 1;
-	int other_stack_space =
-		(n_stack > 1) ? (n_stack - 1) * (min_stack_height + gaps) : 0;
-	int max_raw = tile_height - other_stack_space;
-
-	if (raw_new > max_raw)
-		raw_new = max_raw;
-
-	focused->custom_stack_height = raw_new;
-	tile();
-}
-
-void resize_stack_sub(void) {
-	if (!focused || focused->floating || focused == workspaces[current_ws])
-		return;
-
-	int bw2 = 2 * user_config.border_width;
-	int raw_cur = (focused->custom_stack_height > 0)
-					  ? focused->custom_stack_height
-					  : (focused->h + bw2);
-
-	int raw_new = raw_cur - user_config.resize_stack_amt;
-	int min_raw = bw2 + 1;
-
-	if (raw_new < min_raw)
-		raw_new = min_raw;
-
-	focused->custom_stack_height = raw_new;
-	tile();
 }
 
 void resize_win_down(void) {
@@ -1904,195 +1826,130 @@ void swap_clients(client_t *a, client_t *b) {
 	ta->next = tb_next == ta ? tb : tb_next;
 }
 
-void tile(void) {
-	update_struts();
-	client_t *head = workspaces[current_ws];
-	int total = 0;
-
-	for (client_t *c = head; c; c = c->next) {
-		if (c->mapped && !c->floating && !c->fullscreen)
-			total++;
-	}
-
-	if (total == 0)
+static void tile_recursive(client_t **clients, int start, int end, int x, int y,
+						   int w, int h) {
+	if (start >= end)
 		return;
-
-	if (monocle) {
-		for (client_t *c = head; c; c = c->next) {
-			if (!c->mapped || c->floating || c->fullscreen)
-				continue;
-
-			int border_width = user_config.border_width;
-			int gaps = user_config.gaps;
-
-			int x = reserve_left + gaps;
-			int y = reserve_top + gaps;
-			int w = scr_width - reserve_left - reserve_right - 2 * gaps;
-			int h = scr_height - reserve_top - reserve_bottom - 2 * gaps;
-
-			XWindowChanges wc = {.x = x,
-								 .y = y,
-								 .width = MAX(1, w - 2 * border_width),
-								 .height = MAX(1, h - 2 * border_width),
-								 .border_width = border_width};
+	if (start == end - 1) {
+		/* Only one client: give it the full rectangle */
+		client_t *c = clients[start];
+		int bw = user_config.border_width;
+		XWindowChanges wc = {.x = x,
+							 .y = y,
+							 .width = MAX(1, w - 2 * bw),
+							 .height = MAX(1, h - 2 * bw),
+							 .border_width = bw};
+		if (c->x != wc.x || c->y != wc.y || c->w != wc.width ||
+			c->h != wc.height)
 			XConfigureWindow(dpy, c->win,
 							 CWX | CWY | CWWidth | CWHeight | CWBorderWidth,
 							 &wc);
-
-			c->x = wc.x;
-			c->y = wc.y;
-			c->w = wc.width;
-			c->h = wc.height;
-		}
-
-		if (focused && focused->mapped && !focused->floating &&
-			!focused->fullscreen)
-			XRaiseWindow(dpy, focused->win);
-
-		update_borders();
+		c->x = wc.x;
+		c->y = wc.y;
+		c->w = wc.width;
+		c->h = wc.height;
 		return;
 	}
 
-	int mon_x = reserve_left;
-	int mon_y = reserve_top;
-	int mon_width = MAX(1, scr_width - reserve_left - reserve_right);
-	int mon_height = MAX(1, scr_height - reserve_top - reserve_bottom);
+	int gaps = user_config.gaps;
+	int bw = user_config.border_width;
 
+	/* Place first client in one half, recurse into the other */
+	if (w >= h) {
+		/* Split horizontally: left | right */
+		int left_w = (w - gaps) / 2;
+		int right_w = w - left_w - gaps;
+		int right_x = x + left_w + gaps;
+
+		client_t *c = clients[start];
+		XWindowChanges wc = {.x = x,
+							 .y = y,
+							 .width = MAX(1, left_w - 2 * bw),
+							 .height = MAX(1, h - 2 * bw),
+							 .border_width = bw};
+		if (c->x != wc.x || c->y != wc.y || c->w != wc.width ||
+			c->h != wc.height)
+			XConfigureWindow(dpy, c->win,
+							 CWX | CWY | CWWidth | CWHeight | CWBorderWidth,
+							 &wc);
+		c->x = wc.x;
+		c->y = wc.y;
+		c->w = wc.width;
+		c->h = wc.height;
+
+		tile_recursive(clients, start + 1, end, right_x, y, right_w, h);
+	} else {
+		/* Split vertically: top / bottom */
+		int top_h = (h - gaps) / 2;
+		int bottom_h = h - top_h - gaps;
+		int bottom_y = y + top_h + gaps;
+
+		client_t *c = clients[start];
+		XWindowChanges wc = {.x = x,
+							 .y = y,
+							 .width = MAX(1, w - 2 * bw),
+							 .height = MAX(1, top_h - 2 * bw),
+							 .border_width = bw};
+		if (c->x != wc.x || c->y != wc.y || c->w != wc.width ||
+			c->h != wc.height)
+			XConfigureWindow(dpy, c->win,
+							 CWX | CWY | CWWidth | CWHeight | CWBorderWidth,
+							 &wc);
+		c->x = wc.x;
+		c->y = wc.y;
+		c->w = wc.width;
+		c->h = wc.height;
+
+		tile_recursive(clients, start + 1, end, x, bottom_y, w, bottom_h);
+	}
+}
+
+void tile(void) {
+	update_struts();
+	client_t *head = workspaces[current_ws];
+
+	/* Collect tileable clients */
 	client_t *tileable[MAX_CLIENTS] = {0};
 	int n_tileable = 0;
-	for (client_t *c = head; c && n_tileable < MAX_CLIENTS; c = c->next) {
+	for (client_t *c = head; c && n_tileable < MAX_CLIENTS; c = c->next)
 		if (c->mapped && !c->floating && !c->fullscreen)
 			tileable[n_tileable++] = c;
-	}
 
 	if (n_tileable == 0)
 		return;
 
 	int gaps = user_config.gaps;
-	int tile_x = mon_x + gaps;
-	int tile_y = mon_y + gaps;
-	int tile_width = MAX(1, mon_width - 2 * gaps);
-	int tile_height = MAX(1, mon_height - 2 * gaps);
-	float master_frac = CLAMP(user_config.master_width, MF_MIN, MF_MAX);
-	int master_width =
-		(n_tileable > 1) ? (int)(tile_width * master_frac) : tile_width;
-	int stack_width = (n_tileable > 1) ? (tile_width - master_width - gaps) : 0;
+	int x = reserve_left + gaps;
+	int y = reserve_top + gaps;
+	int w = MAX(1, scr_width - reserve_left - reserve_right - 2 * gaps);
+	int h = MAX(1, scr_height - reserve_top - reserve_bottom - 2 * gaps);
 
-	{
-		client_t *c = tileable[0];
-		int border_width = 2 * user_config.border_width;
-		XWindowChanges wc = {.x = tile_x,
-							 .y = tile_y,
-							 .width = MAX(1, master_width - border_width),
-							 .height = MAX(1, tile_height - border_width),
-							 .border_width = user_config.border_width};
-
-		Bool geom_differ = c->x != wc.x || c->y != wc.y || c->w != wc.width ||
-						   c->h != wc.height;
-		if (geom_differ)
+	if (monocle) {
+		/* Monocle: all clients get the full area, focused on top */
+		for (int i = 0; i < n_tileable; i++) {
+			client_t *c = tileable[i];
+			int bw = user_config.border_width;
+			XWindowChanges wc = {.x = x,
+								 .y = y,
+								 .width = MAX(1, w - 2 * bw),
+								 .height = MAX(1, h - 2 * bw),
+								 .border_width = bw};
 			XConfigureWindow(dpy, c->win,
 							 CWX | CWY | CWWidth | CWHeight | CWBorderWidth,
 							 &wc);
-
-		c->x = wc.x;
-		c->y = wc.y;
-		c->w = wc.width;
-		c->h = wc.height;
-	}
-
-	if (n_tileable == 1) {
+			c->x = wc.x;
+			c->y = wc.y;
+			c->w = wc.width;
+			c->h = wc.height;
+		}
+		if (focused && focused->mapped && !focused->floating &&
+			!focused->fullscreen)
+			XRaiseWindow(dpy, focused->win);
 		update_borders();
 		return;
 	}
 
-	int border_width = 2 * user_config.border_width;
-	int n_stack = n_tileable - 1;
-	int min_stack_height = border_width + 1;
-	int total_fixed_heights = 0;
-	int n_auto = 0; /* automatically take up leftover space */
-	int heights_final[MAX_CLIENTS] = {0};
-
-	for (int i = 1; i < n_tileable; i++) { /* i=1 - we are excluding master */
-		if (tileable[i]->custom_stack_height > 0)
-			total_fixed_heights += tileable[i]->custom_stack_height;
-		else
-			n_auto++;
-	}
-
-	int total_vgaps = (n_stack - 1) * gaps;
-	int remaining = tile_height - total_fixed_heights - total_vgaps;
-
-	if (n_auto > 0 && remaining >= n_auto * min_stack_height) {
-		int used = 0;
-		int count = 0;
-		int auto_height = remaining / n_auto;
-
-		for (int i = 1; i < n_tileable; i++) {
-			if (tileable[i]->custom_stack_height > 0) {
-				heights_final[i] = tileable[i]->custom_stack_height;
-			} else {
-				count++;
-				heights_final[i] =
-					(count < n_auto) ? auto_height : remaining - used;
-				used += auto_height;
-			}
-		}
-	} else {
-		for (int i = 1; i < n_tileable; i++) {
-			if (tileable[i]->custom_stack_height > 0)
-				heights_final[i] = tileable[i]->custom_stack_height;
-			else
-				heights_final[i] = min_stack_height;
-		}
-	}
-
-	int total_height = total_vgaps;
-	for (int i = 1; i < n_tileable; i++)
-		total_height += heights_final[i];
-
-	int overfill = total_height - tile_height;
-	if (overfill > 0) {
-		/* shrink from top down, excluding bottom */
-		for (int i = 1; i < n_tileable - 1 && overfill > 0; i++) {
-			int shrink = MIN(overfill, heights_final[i] - min_stack_height);
-			heights_final[i] -= shrink;
-			overfill -= shrink;
-		}
-	}
-
-	/* if its not perfectly filled stretch bottom to absorb remainder */
-	int actual_height = total_vgaps;
-	for (int i = 1; i < n_tileable; i++)
-		actual_height += heights_final[i];
-
-	int shortfall = tile_height - actual_height;
-	if (shortfall > 0)
-		heights_final[n_tileable - 1] += shortfall;
-
-	int stack_y = tile_y;
-	for (int i = 1; i < n_tileable; i++) {
-		client_t *c = tileable[i];
-		XWindowChanges wc = {
-			.x = tile_x + master_width + gaps,
-			.y = stack_y,
-			.width = MAX(1, stack_width - (2 * user_config.border_width)),
-			.height = MAX(1, heights_final[i] - (2 * user_config.border_width)),
-			.border_width = user_config.border_width};
-
-		Bool geom_differ = c->x != wc.x || c->y != wc.y || c->w != wc.width ||
-						   c->h != wc.height;
-		if (geom_differ)
-			XConfigureWindow(dpy, c->win,
-							 CWX | CWY | CWWidth | CWHeight | CWBorderWidth,
-							 &wc);
-
-		c->x = wc.x;
-		c->y = wc.y;
-		c->w = wc.width;
-		c->h = wc.height;
-
-		stack_y += heights_final[i] + gaps;
-	}
+	tile_recursive(tileable, 0, n_tileable, x, y, w, h);
 	update_borders();
 }
 

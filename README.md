@@ -10,7 +10,7 @@
 
 # Tilite
 
-Tilite is a ultra-light minimal dynamic window manager with just over 2k lines SLOC. This project seeks to cover the exact minimum number of features I need to have the desktop experience I want. This window manager is not designed to be general purpose but if it fits your use case I hope you find it as useful as I do.
+Tilite is a ultra-light minimal dynamic window manager with just under 2k SLOC. This project seeks to cover the exact minimum number of features I need to have the desktop experience I want. This window manager is not designed to be general purpose but if it fits your use case I hope you find it as useful as I do.
 
 ---
 

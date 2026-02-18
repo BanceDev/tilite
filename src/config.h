@@ -11,9 +11,6 @@
 
 #define CFG_GAPS                5
 #define CFG_BORDER_WIDTH        3
-#define CFG_MASTER_WIDTH        0.70f
-#define CFG_RESIZE_MASTER_AMT   1
-#define CFG_RESIZE_STACK_AMT    20
 #define CFG_MOVE_WINDOW_AMT     50
 #define CFG_RESIZE_WINDOW_AMT   50
 #define CFG_SNAP_DISTANCE       5
@@ -21,7 +18,6 @@
 #define CFG_NEW_WIN_FOCUS       True
 #define CFG_WARP_CURSOR         True
 #define CFG_FLOATING_ON_TOP     True
-#define CFG_NEW_WIN_MASTER      False
 
 #define CFG_BINDS \
     /* Application launchers */ \
@@ -38,15 +34,9 @@
     /* Focus */ \
     { MODKEY,                XK_j,      0, { .fn = focus_next       }, TYPE_FUNC }, \
     { MODKEY,                XK_k,      0, { .fn = focus_prev       }, TYPE_FUNC }, \
-    /* Master/stack movement */ \
-    { MODKEY|ShiftMask,      XK_j,      0, { .fn = move_master_next  }, TYPE_FUNC }, \
-    { MODKEY|ShiftMask,      XK_k,      0, { .fn = move_master_prev  }, TYPE_FUNC }, \
-    /* Master resize */ \
-    { MODKEY,                XK_l,      0, { .fn = resize_master_add }, TYPE_FUNC }, \
-    { MODKEY,                XK_h,      0, { .fn = resize_master_sub }, TYPE_FUNC }, \
-    /* Stack resize */ \
-    { MODKEY|ControlMask,    XK_l,      0, { .fn = resize_stack_add  }, TYPE_FUNC }, \
-    { MODKEY|ControlMask,    XK_h,      0, { .fn = resize_stack_sub  }, TYPE_FUNC }, \
+    /* Movement */ \
+    { MODKEY|ShiftMask,      XK_j,      0, { .fn = move_focused_next  }, TYPE_FUNC }, \
+    { MODKEY|ShiftMask,      XK_k,      0, { .fn = move_focused_prev  }, TYPE_FUNC }, \
     /* Keyboard window movement */ \
     { MODKEY,                XK_Up,     0, { .fn = move_win_up       }, TYPE_FUNC }, \
     { MODKEY,                XK_Down,   0, { .fn = move_win_down     }, TYPE_FUNC }, \
