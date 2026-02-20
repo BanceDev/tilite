@@ -961,7 +961,10 @@ void hdl_map_req(XEvent *xev) {
     }
 
     if (should_float || global_floating)
+    {
         c->floating = True;
+        bsp_remove(&bsp_roots[target_ws], c);
+    }
 
     /* center floating windows & set border */
     if (c->floating && !c->fullscreen) {
