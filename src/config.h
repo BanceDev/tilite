@@ -10,7 +10,7 @@
 #define CFG_SWAP_BORDER_COL "#1E1E2E"
 
 #define CFG_GAPS 5
-#define CFG_BORDER_WIDTH 3
+#define CFG_BORDER_WIDTH 0
 #define CFG_MOVE_WINDOW_AMT 50
 #define CFG_RESIZE_WINDOW_AMT 50
 #define CFG_SNAP_DISTANCE 5
@@ -29,20 +29,12 @@
          {.cmd = build_argv("surf git.bance.dev")},                            \
          TYPE_CMD},                                                            \
         {MODKEY, XK_space, 0, {.cmd = build_argv("dmenu_run")}, TYPE_CMD},     \
-        {MODKEY,                                                               \
-         XK_equal,                                                             \
-         0,                                                                    \
-         {.cmd = build_argv("volup")},      \
-         TYPE_CMD},                                                            \
-        {MODKEY,                                                               \
-         XK_minus,                                                             \
-         0,                                                                    \
-         {.cmd = build_argv("voldown")},      \
-         TYPE_CMD},                                                            \
+        {MODKEY, XK_equal, 0, {.cmd = build_argv("volup")}, TYPE_CMD},         \
+        {MODKEY, XK_minus, 0, {.cmd = build_argv("voldown")}, TYPE_CMD},       \
         {MODKEY,                                                               \
          XK_0,                                                                 \
          0,                                                                    \
-         {.cmd = build_argv("volmute")},     \
+         {.cmd = build_argv("volmute")},                                       \
          TYPE_CMD}, /* Window management */                                    \
         {MODKEY, XK_q, 0, {.fn = close_focused}, TYPE_FUNC},                   \
         {MODKEY | ShiftMask, XK_e, 0, {.fn = quit}, TYPE_FUNC},                \
