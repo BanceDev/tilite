@@ -10,7 +10,9 @@
 
 # Tilite
 
-Tilite is a ultra-light minimal dynamic window manager with just under 2k SLOC. This project seeks to cover the exact minimum number of features I need to have the desktop experience I want. This window manager is not designed to be general purpose but if it fits your use case I hope you find it as useful as I do.
+Tilite is a ultra-light minimal dynamic window manager with just over 2k SLOC. This project seeks to cover the exact minimum number of features I need to have the desktop experience I want. This window manager is not designed to be general purpose but if it fits your use case I hope you find it as useful as I do.
+
+The main thing that may prevent you from using this wm is that I don't have multiple monitor support because I don't need it. If you'd like to add it as a patch submit a PR with a patch file and I could add it as a build option.
 
 ---
 
@@ -33,9 +35,9 @@ Then just add tilite to your `.xinitrc` and you're good to go. You could also ma
 
 ## Configuration
 
-All configuration of tilite is done at compile time in the config.h header.
+All configuration of tilite is done at compile time in the config.h header. A sample one is provided in this repo.
 
 ## Thanks & Inspiration
 
-- dwm - the basis for suckless tiling
+- dwm - the og minimal tiler
 - sxwm - lots of source code basis

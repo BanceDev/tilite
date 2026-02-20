@@ -136,9 +136,24 @@ typedef enum {
     ATOM_COUNT
 } atom_type_t;
 
+typedef enum { BSP_LEAF, BSP_SPLIT_V, BSP_SPLIT_H } bsp_type_t;
+
+typedef struct bsp_node_t {
+    bsp_type_t type;
+    /* for leaf nodes */
+    client_t *client;
+    /* for internal nodes */
+    struct bsp_node_t *first;  /* left / top  */
+    struct bsp_node_t *second; /* right / bottom */
+    struct bsp_node_t *parent;
+} bsp_node_t;
+
 const char **build_argv(const char *cmd);
 client_t *add_client(Window w, int ws);
 void apply_fullscreen(client_t *c, Bool on);
+bsp_node_t *bsp_insert(bsp_node_t **root, client_t *old_client,
+                       client_t *new_client);
+void bsp_remove(bsp_node_t **root, client_t *c);
 void change_workspace(int ws);
 int check_parent(pid_t p, pid_t c);
 int clean_mask(int mask);
