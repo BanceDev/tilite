@@ -310,11 +310,10 @@ void change_workspace(int ws) {
     if (ws >= NUM_WORKSPACES || ws == current_ws)
         return;
 
-    /* remember last focus for workspace we are leaving */
     ws_focused[current_ws] = focused;
 
     in_ws_switch = True;
-    XGrabServer(dpy); /* freeze rendering for tearless switching */
+    XGrabServer(dpy);
 
     for (client_t *c = workspaces[current_ws]; c; c = c->next) {
         if (c->mapped) {
@@ -331,7 +330,6 @@ void change_workspace(int ws) {
 
     tile();
 
-    /* restore last focused client for this workspace */
     focused = ws_focused[current_ws];
 
     if (focused) {
@@ -1143,15 +1141,13 @@ void hdl_property_ntf(XEvent *xev) {
 void hdl_unmap_ntf(XEvent *xev) {
     if (!in_ws_switch) {
         Window w = xev->xunmap.window;
-        for (int i = 0; i < NUM_WORKSPACES; i++) {
-            for (client_t *c = workspaces[i]; c; c = c->next) {
-                if (c->win == w && c->mapped) {
-                    c->mapped = False;
-                    /* Remove from BSP so tile() doesn't see a stale leaf */
-                    if (!c->floating && !c->fullscreen)
-                        bsp_remove(&bsp_roots[i], c);
-                    break;
-                }
+        for (client_t *c = workspaces[current_ws]; c; c = c->next) {
+            if (c->win == w && c->mapped) {
+                c->mapped = False;
+                /* Remove from BSP so tile() doesn't see a stale leaf */
+                if (!c->floating && !c->fullscreen)
+                    bsp_remove(&bsp_roots[current_ws], c);
+                break;
             }
         }
     }
