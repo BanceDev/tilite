@@ -26,23 +26,15 @@
         {MODKEY, XK_space, 0, {.cmd = build_argv("dmenu_run")}, TYPE_CMD},     \
         {MODKEY, XK_q, 0, {.fn = close_focused}, TYPE_FUNC},                   \
         {MODKEY | ShiftMask, XK_e, 0, {.fn = quit}, TYPE_FUNC},                \
-        {MODKEY, XK_m, 0, {.fn = toggle_monocle}, TYPE_FUNC}, /* Focus */      \
+        {MODKEY, XK_m, 0, {.fn = toggle_monocle}, TYPE_FUNC},                  \
         {MODKEY, XK_j, 0, {.fn = focus_next}, TYPE_FUNC},                      \
-        {MODKEY, XK_k, 0, {.fn = focus_prev}, TYPE_FUNC}, /* Movement */       \
+        {MODKEY, XK_k, 0, {.fn = focus_prev}, TYPE_FUNC},                      \
         {MODKEY | ShiftMask, XK_j, 0, {.fn = move_focused_next}, TYPE_FUNC},   \
-        {MODKEY | ShiftMask,                                                   \
-         XK_k,                                                                 \
-         0,                                                                    \
-         {.fn = move_focused_prev},                                            \
-         TYPE_FUNC}, /* Keyboard window movement */                            \
+        {MODKEY | ShiftMask, XK_k, 0, {.fn = move_focused_prev}, TYPE_FUNC},   \
         {MODKEY, XK_Up, 0, {.fn = move_win_up}, TYPE_FUNC},                    \
         {MODKEY, XK_Down, 0, {.fn = move_win_down}, TYPE_FUNC},                \
         {MODKEY, XK_Left, 0, {.fn = move_win_left}, TYPE_FUNC},                \
-        {MODKEY,                                                               \
-         XK_Right,                                                             \
-         0,                                                                    \
-         {.fn = move_win_right},                                               \
-         TYPE_FUNC}, /* Keyboard window resize */                              \
+        {MODKEY, XK_Right, 0, {.fn = move_win_right}, TYPE_FUNC},              \
         {MODKEY | ShiftMask, XK_Up, 0, {.fn = resize_win_up}, TYPE_FUNC},      \
         {MODKEY | ShiftMask, XK_Down, 0, {.fn = resize_win_down}, TYPE_FUNC},  \
         {MODKEY | ShiftMask, XK_Left, 0, {.fn = resize_win_left}, TYPE_FUNC},  \
@@ -50,18 +42,14 @@
          XK_Right,                                                             \
          0,                                                                    \
          {.fn = resize_win_right},                                             \
-         TYPE_FUNC}, /* Floating / fullscreen */                               \
+         TYPE_FUNC},                                                           \
         {MODKEY, XK_f, 0, {.fn = toggle_floating}, TYPE_FUNC},                 \
         {MODKEY | ShiftMask,                                                   \
          XK_space,                                                             \
          0,                                                                    \
          {.fn = toggle_floating_global},                                       \
          TYPE_FUNC},                                                           \
-        {MODKEY | ShiftMask,                                                   \
-         XK_f,                                                                 \
-         0,                                                                    \
-         {.fn = toggle_fullscreen},                                            \
-         TYPE_FUNC}, /* Workspaces 1–9 */                                      \
+        {MODKEY | ShiftMask, XK_f, 0, {.fn = toggle_fullscreen}, TYPE_FUNC},   \
         {MODKEY, XK_1, 0, {.ws = 0}, TYPE_WS_CHANGE},                          \
         {MODKEY | ShiftMask, XK_1, 0, {.ws = 0}, TYPE_WS_MOVE},                \
         {MODKEY, XK_2, 0, {.ws = 1}, TYPE_WS_CHANGE},                          \
