@@ -27,113 +27,113 @@
 
 #define NUM_WORKSPACES 9
 #define WORKSPACE_NAMES                                                        \
-	"1"                                                                        \
-	"\0"                                                                       \
-	"2"                                                                        \
-	"\0"                                                                       \
-	"3"                                                                        \
-	"\0"                                                                       \
-	"4"                                                                        \
-	"\0"                                                                       \
-	"5"                                                                        \
-	"\0"                                                                       \
-	"6"                                                                        \
-	"\0"                                                                       \
-	"7"                                                                        \
-	"\0"                                                                       \
-	"8"                                                                        \
-	"\0"                                                                       \
-	"9"                                                                        \
-	"\0"
+    "1"                                                                        \
+    "\0"                                                                       \
+    "2"                                                                        \
+    "\0"                                                                       \
+    "3"                                                                        \
+    "\0"                                                                       \
+    "4"                                                                        \
+    "\0"                                                                       \
+    "5"                                                                        \
+    "\0"                                                                       \
+    "6"                                                                        \
+    "\0"                                                                       \
+    "7"                                                                        \
+    "\0"                                                                       \
+    "8"                                                                        \
+    "\0"                                                                       \
+    "9"                                                                        \
+    "\0"
 
 typedef enum { DRAG_NONE, DRAG_MOVE, DRAG_RESIZE, DRAG_SWAP } DragMode;
 typedef void (*event_t)(XEvent *);
 
 typedef union {
-	const char **cmd;
-	void (*fn)(void);
-	int ws;
+    const char **cmd;
+    void (*fn)(void);
+    int ws;
 } action_t;
 
 typedef struct {
-	int mods;
-	KeySym keysym;
-	KeyCode keycode;
-	action_t action;
-	int type;
+    int mods;
+    KeySym keysym;
+    KeyCode keycode;
+    action_t action;
+    int type;
 } binding_t;
 
 typedef struct client_t {
-	Window win;
-	int x, y, w, h;
-	int orig_x, orig_y, orig_w, orig_h;
-	int ws;
-	Bool fixed;
-	Bool floating;
-	Bool fullscreen;
-	Bool mapped;
-	pid_t pid;
-	struct client_t *next;
+    Window win;
+    int x, y, w, h;
+    int orig_x, orig_y, orig_w, orig_h;
+    int ws;
+    Bool fixed;
+    Bool floating;
+    Bool fullscreen;
+    Bool mapped;
+    pid_t pid;
+    struct client_t *next;
 } client_t;
 
 typedef struct {
-	int modkey;
-	int gaps;
-	int border_width;
-	long border_foc_col;
-	long border_ufoc_col;
-	long border_swap_col;
-	int motion_throttle;
-	int snap_distance;
-	int n_binds;
-	int move_window_amt;
-	int resize_window_amt;
-	Bool new_win_focus;
-	Bool warp_cursor;
-	Bool floating_on_top;
-	binding_t binds[MAX_ITEMS];
-	char *to_run[MAX_ITEMS];
+    int modkey;
+    int gaps;
+    int border_width;
+    long border_foc_col;
+    long border_ufoc_col;
+    long border_swap_col;
+    int motion_throttle;
+    int snap_distance;
+    int n_binds;
+    int move_window_amt;
+    int resize_window_amt;
+    Bool new_win_focus;
+    Bool warp_cursor;
+    Bool floating_on_top;
+    binding_t binds[MAX_ITEMS];
+    char *to_run[MAX_ITEMS];
 } config_t;
 
 typedef struct {
-	const char *name;
-	void (*fn)(void);
+    const char *name;
+    void (*fn)(void);
 } command_t;
 
 typedef enum {
-	ATOM_NET_ACTIVE_WINDOW,
-	ATOM_NET_CURRENT_DESKTOP,
-	ATOM_NET_SUPPORTED,
-	ATOM_NET_WM_STATE,
-	ATOM_NET_WM_STATE_FULLSCREEN,
-	ATOM_WM_STATE,
-	ATOM_NET_WM_WINDOW_TYPE,
-	ATOM_NET_WORKAREA,
-	ATOM_WM_DELETE_WINDOW,
-	ATOM_NET_WM_STRUT,
-	ATOM_NET_WM_STRUT_PARTIAL,
-	ATOM_NET_SUPPORTING_WM_CHECK,
-	ATOM_NET_WM_NAME,
-	ATOM_UTF8_STRING,
-	ATOM_NET_WM_DESKTOP,
-	ATOM_NET_CLIENT_LIST,
-	ATOM_NET_FRAME_EXTENTS,
-	ATOM_NET_NUMBER_OF_DESKTOPS,
-	ATOM_NET_DESKTOP_NAMES,
-	ATOM_NET_WM_PID,
-	ATOM_NET_WM_WINDOW_TYPE_DOCK,
-	ATOM_NET_WM_WINDOW_TYPE_UTILITY,
-	ATOM_NET_WM_WINDOW_TYPE_DIALOG,
-	ATOM_NET_WM_WINDOW_TYPE_TOOLBAR,
-	ATOM_NET_WM_WINDOW_TYPE_SPLASH,
-	ATOM_NET_WM_WINDOW_TYPE_POPUP_MENU,
-	ATOM_NET_WM_WINDOW_TYPE_MENU,
-	ATOM_NET_WM_WINDOW_TYPE_DROPDOWN_MENU,
-	ATOM_NET_WM_WINDOW_TYPE_TOOLTIP,
-	ATOM_NET_WM_WINDOW_TYPE_NOTIFICATION,
-	ATOM_NET_WM_STATE_MODAL,
-	ATOM_WM_PROTOCOLS,
-	ATOM_COUNT
+    ATOM_NET_ACTIVE_WINDOW,
+    ATOM_NET_CURRENT_DESKTOP,
+    ATOM_NET_SUPPORTED,
+    ATOM_NET_WM_STATE,
+    ATOM_NET_WM_STATE_FULLSCREEN,
+    ATOM_WM_STATE,
+    ATOM_NET_WM_WINDOW_TYPE,
+    ATOM_NET_WORKAREA,
+    ATOM_WM_DELETE_WINDOW,
+    ATOM_NET_WM_STRUT,
+    ATOM_NET_WM_STRUT_PARTIAL,
+    ATOM_NET_SUPPORTING_WM_CHECK,
+    ATOM_NET_WM_NAME,
+    ATOM_UTF8_STRING,
+    ATOM_NET_WM_DESKTOP,
+    ATOM_NET_CLIENT_LIST,
+    ATOM_NET_FRAME_EXTENTS,
+    ATOM_NET_NUMBER_OF_DESKTOPS,
+    ATOM_NET_DESKTOP_NAMES,
+    ATOM_NET_WM_PID,
+    ATOM_NET_WM_WINDOW_TYPE_DOCK,
+    ATOM_NET_WM_WINDOW_TYPE_UTILITY,
+    ATOM_NET_WM_WINDOW_TYPE_DIALOG,
+    ATOM_NET_WM_WINDOW_TYPE_TOOLBAR,
+    ATOM_NET_WM_WINDOW_TYPE_SPLASH,
+    ATOM_NET_WM_WINDOW_TYPE_POPUP_MENU,
+    ATOM_NET_WM_WINDOW_TYPE_MENU,
+    ATOM_NET_WM_WINDOW_TYPE_DROPDOWN_MENU,
+    ATOM_NET_WM_WINDOW_TYPE_TOOLTIP,
+    ATOM_NET_WM_WINDOW_TYPE_NOTIFICATION,
+    ATOM_NET_WM_STATE_MODAL,
+    ATOM_WM_PROTOCOLS,
+    ATOM_COUNT
 } atom_type_t;
 
 const char **build_argv(const char *cmd);
@@ -151,7 +151,7 @@ pid_t get_parent_process(pid_t c);
 pid_t get_pid(Window w);
 int get_workspace_for_window(Window w);
 void grab_button(Mask button, Mask mod, Window w, Bool owner_events,
-				 Mask masks);
+                 Mask masks);
 void grab_keys(void);
 void hdl_button(XEvent *xev);
 void hdl_button_release(XEvent *xev);
