@@ -447,12 +447,10 @@ void focus_next(void) {
     client_t *start = focused ? focused : workspaces[current_ws];
     client_t *c = start;
 
-    /* loop until we find a mapped client or return to start */
     do
         c = c->next ? c->next : workspaces[current_ws];
     while (!c->mapped && c != start);
 
-    /* if we return to start: */
     if (!c->mapped)
         return;
 
@@ -960,8 +958,7 @@ void hdl_map_req(XEvent *xev) {
         c->fixed = True;
     }
 
-    if (should_float || global_floating)
-    {
+    if (should_float || global_floating) {
         c->floating = True;
         bsp_remove(&bsp_roots[target_ws], c);
     }
