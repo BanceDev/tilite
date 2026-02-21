@@ -499,45 +499,20 @@ static client_t *bsp_find_neighbor(client_t *src, int dir) {
     return best;
 }
 
-void focus_left(void) {
+static void focus_dir(int dir) {
     if (!focused)
         return;
-    client_t *nb = bsp_find_neighbor(focused, 0);
+    client_t *nb = bsp_find_neighbor(focused, dir);
     if (!nb)
         return;
     focused = nb;
     set_input_focus(focused, True, True);
 }
 
-void focus_right(void) {
-    if (!focused)
-        return;
-    client_t *nb = bsp_find_neighbor(focused, 1);
-    if (!nb)
-        return;
-    focused = nb;
-    set_input_focus(focused, True, True);
-}
-
-void focus_up(void) {
-    if (!focused)
-        return;
-    client_t *nb = bsp_find_neighbor(focused, 2);
-    if (!nb)
-        return;
-    focused = nb;
-    set_input_focus(focused, True, True);
-}
-
-void focus_down(void) {
-    if (!focused)
-        return;
-    client_t *nb = bsp_find_neighbor(focused, 3);
-    if (!nb)
-        return;
-    focused = nb;
-    set_input_focus(focused, True, True);
-}
+void focus_left(void) { focus_dir(0); }
+void focus_right(void) { focus_dir(1); }
+void focus_up(void) { focus_dir(2); }
+void focus_down(void) { focus_dir(3); }
 
 int get_workspace_for_window(Window w) {
     XClassHint ch = {0};
