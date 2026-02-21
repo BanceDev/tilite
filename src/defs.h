@@ -4,24 +4,16 @@
 #define AUTHOR "(C) Lance Borden 2026"
 #define LICENSE "Licensed under the GPL v3.0"
 
-#define MF_MIN 0.05f
-#define MF_MAX 0.95f
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
-#define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define UDIST(a, b) abs((int)(a) - (int)(b))
 #define CLAMP(x, lo, hi) (((x) < (lo)) ? (lo) : ((x) > (hi)) ? (hi) : (x))
 
-#define MAX_BINDS 256
 #define MAX_CLIENTS 99
-#define MAX_SCRATCHPADS 32
 #define MAX_ITEMS 256
 #define MIN_WINDOW_SIZE 20
-#define PATH_MAX 4096
 
-/* workspaces */
 #define TYPE_WS_CHANGE 0
 #define TYPE_WS_MOVE 1
-/* fn/cmd */
 #define TYPE_FUNC 2
 #define TYPE_CMD 3
 
@@ -72,7 +64,6 @@ typedef struct client_t {
     Bool floating;
     Bool fullscreen;
     Bool mapped;
-    pid_t pid;
     struct client_t *next;
 } client_t;
 
@@ -142,7 +133,6 @@ typedef struct bsp_node_t {
     bsp_type_t type;
     /* for leaf nodes */
     client_t *client;
-    /* for internal nodes */
     struct bsp_node_t *first;  /* left / top  */
     struct bsp_node_t *second; /* right / bottom */
     struct bsp_node_t *parent;
@@ -155,15 +145,14 @@ bsp_node_t *bsp_insert(bsp_node_t **root, client_t *old_client,
                        client_t *new_client);
 void bsp_remove(bsp_node_t **root, client_t *c);
 void change_workspace(int ws);
-int check_parent(pid_t p, pid_t c);
 int clean_mask(int mask);
 void close_focused(void);
 client_t *find_client(Window w);
 Window find_toplevel(Window w);
-void focus_next(void);
-void focus_prev(void);
-pid_t get_parent_process(pid_t c);
-pid_t get_pid(Window w);
+void focus_down(void);
+void focus_left(void);
+void focus_right(void);
+void focus_up(void);
 int get_workspace_for_window(Window w);
 void grab_button(Mask button, Mask mod, Window w, Bool owner_events,
                  Mask masks);
@@ -181,10 +170,10 @@ void hdl_map_req(XEvent *xev);
 void hdl_motion(XEvent *xev);
 void hdl_property_ntf(XEvent *xev);
 void hdl_unmap_ntf(XEvent *xev);
-void init_defaults(void);
-Bool is_child_proc(pid_t pid1, pid_t pid2);
-void move_focused_next(void);
-void move_focused_prev(void);
+void move_focused_down(void);
+void move_focused_left(void);
+void move_focused_right(void);
+void move_focused_up(void);
 void move_to_workspace(int ws);
 void move_win_down(void);
 void move_win_left(void);

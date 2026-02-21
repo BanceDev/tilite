@@ -1,4 +1,5 @@
 #include <ctype.h>
+#include <limits.h>
 #include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -186,16 +187,13 @@ client_t *add_client(Window w, int ws) {
     c->win = w;
     c->next = NULL;
     c->ws = ws;
-    c->pid = get_pid(w);
 
     if (!workspaces[ws]) {
         workspaces[ws] = c;
     } else if (focused && focused->ws == ws) {
-        /* Insert after focused so the new window splits the focused slot */
         c->next = focused->next;
         focused->next = c;
     } else {
-        /* Fallback: append to tail */
         client_t *tail = workspaces[ws];
         while (tail->next)
             tail = tail->next;
@@ -203,7 +201,6 @@ client_t *add_client(Window w, int ws) {
     }
     open_windows++;
 
-    /* subscribing to certain events */
     Mask window_masks = EnterWindowMask | LeaveWindowMask | FocusChangeMask |
                         PropertyChangeMask | StructureNotifyMask |
                         ButtonPressMask | ButtonReleaseMask | PointerMotionMask;
@@ -214,7 +211,6 @@ client_t *add_client(Window w, int ws) {
                 ButtonPressMask);
     grab_button(Button3, user_config.modkey, w, False, ButtonPressMask);
 
-    /* allow for more graceful exitting */
     Atom protos[] = {atoms[ATOM_WM_DELETE_WINDOW]};
     XSetWMProtocols(dpy, w, protos, 1);
 
@@ -225,7 +221,6 @@ client_t *add_client(Window w, int ws) {
     c->w = wa.width;
     c->h = wa.height;
 
-    /* set client defaults */
     c->fixed = False;
     c->floating = False;
     c->fullscreen = False;
@@ -234,16 +229,12 @@ client_t *add_client(Window w, int ws) {
     if (global_floating)
         c->floating = True;
 
-    /* Update BSP tree: split the focused client's region for the new client.
-     * Do this after floating flag is set so we don't add floating wins to BSP.
-     */
     if (!c->floating && !c->fullscreen) {
         client_t *split_target =
             (focused && focused->ws == ws) ? focused : NULL;
         bsp_insert(&bsp_roots[ws], split_target, c);
     }
 
-    /* remember first created client per workspace as a fallback */
     if (!ws_focused[ws])
         ws_focused[ws] = c;
 
@@ -251,7 +242,6 @@ client_t *add_client(Window w, int ws) {
         focused = c;
     }
 
-    /* associate client with workspace n */
     long desktop = ws;
     XChangeProperty(dpy, w, atoms[ATOM_NET_WM_DESKTOP], XA_CARDINAL, 32,
                     PropModeReplace, (unsigned char *)&desktop, 1);
@@ -289,7 +279,6 @@ void apply_fullscreen(client_t *c, Bool on) {
     } else {
         c->fullscreen = False;
 
-        /* restore win attributes */
         XMoveResizeWindow(dpy, c->win, c->orig_x, c->orig_y, c->orig_w,
                           c->orig_h);
         XSetWindowBorderWidth(dpy, c->win, user_config.border_width);
@@ -365,13 +354,6 @@ void change_workspace(int ws) {
     in_ws_switch = False;
 }
 
-int check_parent(pid_t p, pid_t c) {
-    while (p != c && c != 0) /* walk proc tree until parent found */
-        c = get_parent_process(c);
-
-    return (int)c;
-}
-
 int clean_mask(int mask) {
     return mask & ~(LockMask | numlock_mask | mode_switch_mask);
 }
@@ -440,90 +422,121 @@ Window find_toplevel(Window w) {
     return w;
 }
 
-void focus_next(void) {
-    if (!workspaces[current_ws])
-        return;
+/* Find the best tiled neighbor of 'src' in a given direction.
+ * dir: 0=left, 1=right, 2=up, 3=down */
+static client_t *bsp_find_neighbor(client_t *src, int dir) {
+    if (!src || src->floating || !src->mapped)
+        return NULL;
 
-    client_t *start = focused ? focused : workspaces[current_ws];
-    client_t *c = start;
+    int src_cx = src->x + src->w / 2;
+    int src_cy = src->y + src->h / 2;
 
-    do
-        c = c->next ? c->next : workspaces[current_ws];
-    while (!c->mapped && c != start);
+    client_t *best = NULL;
+    int best_dist = INT_MAX;
 
-    if (!c->mapped)
-        return;
+    for (client_t *c = workspaces[current_ws]; c; c = c->next) {
+        if (c == src || c->floating || !c->mapped || c->fullscreen)
+            continue;
 
-    focused = c;
-    set_input_focus(focused, True, True);
-}
+        int c_cx = c->x + c->w / 2;
+        int c_cy = c->y + c->h / 2;
 
-void focus_prev(void) {
-    if (!workspaces[current_ws])
-        return;
-
-    client_t *start = focused ? focused : workspaces[current_ws];
-    client_t *c = start;
-
-    /* loop until we find a mapped client or return to starting point */
-    do {
-        client_t *p = workspaces[current_ws];
-        client_t *prev = NULL;
-        while (p && p != c) {
-            prev = p;
-            p = p->next;
+        switch (dir) {
+        case 0: /* left */
+            if (c->x + c->w >= src->x)
+                continue;
+            if (c->y + c->h <= src->y || c->y >= src->y + src->h)
+                continue;
+            {
+                int dist = src_cx - c_cx;
+                if (dist < best_dist) {
+                    best_dist = dist;
+                    best = c;
+                }
+            }
+            break;
+        case 1: /* right */
+            if (c->x <= src->x + src->w)
+                continue;
+            if (c->y + c->h <= src->y || c->y >= src->y + src->h)
+                continue;
+            {
+                int dist = c_cx - src_cx;
+                if (dist < best_dist) {
+                    best_dist = dist;
+                    best = c;
+                }
+            }
+            break;
+        case 2: /* up */
+            if (c->y + c->h >= src->y)
+                continue;
+            if (c->x + c->w <= src->x || c->x >= src->x + src->w)
+                continue;
+            {
+                int dist = src_cy - c_cy;
+                if (dist < best_dist) {
+                    best_dist = dist;
+                    best = c;
+                }
+            }
+            break;
+        case 3: /* down */
+            if (c->y <= src->y + src->h)
+                continue;
+            if (c->x + c->w <= src->x || c->x >= src->x + src->w)
+                continue;
+            {
+                int dist = c_cy - src_cy;
+                if (dist < best_dist) {
+                    best_dist = dist;
+                    best = c;
+                }
+            }
+            break;
         }
-
-        if (prev) {
-            c = prev;
-        } else {
-            /* wrap to tail */
-            p = workspaces[current_ws];
-            while (p->next)
-                p = p->next;
-            c = p;
-        }
-    } while (!c->mapped && c != start);
-
-    /* this stops invisible windows being detected or focused */
-    if (!c->mapped)
-        return;
-
-    focused = c;
-    set_input_focus(focused, True, True);
-}
-
-pid_t get_parent_process(pid_t c) {
-    pid_t v = -1;
-    FILE *f;
-    char buf[256];
-
-    snprintf(buf, sizeof(buf), "/proc/%u/stat", (unsigned)c);
-    if (!(f = fopen(buf, "r")))
-        return 0;
-
-    int no_error = fscanf(f, "%*u %*s %*c %d", &v);
-    (void)no_error;
-    fclose(f);
-    return (pid_t)v;
-}
-
-pid_t get_pid(Window w) {
-    pid_t pid = 0;
-    Atom actual_type;
-    int actual_format;
-    unsigned long n_items, bytes_after;
-    unsigned char *prop = NULL;
-
-    if (XGetWindowProperty(dpy, w, atoms[ATOM_NET_WM_PID], 0, 1, False,
-                           XA_CARDINAL, &actual_type, &actual_format, &n_items,
-                           &bytes_after, &prop) == Success &&
-        prop) {
-        if (actual_format == 32 && n_items == 1)
-            pid = *(pid_t *)prop;
-        XFree(prop);
     }
-    return pid;
+    return best;
+}
+
+void focus_left(void) {
+    if (!focused)
+        return;
+    client_t *nb = bsp_find_neighbor(focused, 0);
+    if (!nb)
+        return;
+    focused = nb;
+    set_input_focus(focused, True, True);
+}
+
+void focus_right(void) {
+    if (!focused)
+        return;
+    client_t *nb = bsp_find_neighbor(focused, 1);
+    if (!nb)
+        return;
+    focused = nb;
+    set_input_focus(focused, True, True);
+}
+
+void focus_up(void) {
+    if (!focused)
+        return;
+    client_t *nb = bsp_find_neighbor(focused, 2);
+    if (!nb)
+        return;
+    focused = nb;
+    set_input_focus(focused, True, True);
+}
+
+void focus_down(void) {
+    if (!focused)
+        return;
+    client_t *nb = bsp_find_neighbor(focused, 3);
+    if (!nb)
+        return;
+    focused = nb;
+    set_input_focus(focused, True, True);
 }
 
 int get_workspace_for_window(Window w) {
@@ -534,7 +547,7 @@ int get_workspace_for_window(Window w) {
     XFree(ch.res_class);
     XFree(ch.res_name);
 
-    return current_ws; /* default */
+    return current_ws;
 }
 
 void grab_button(Mask button, Mask mod, Window w, Bool owner_events,
@@ -1163,83 +1176,34 @@ void inc_gaps(void) {
     update_borders();
 }
 
-void init_defaults(void) {
-    user_config.modkey = Mod4Mask;
-    user_config.gaps = 10;
-    user_config.border_width = 1;
-    user_config.border_foc_col = parse_col("#c0cbff");
-    user_config.border_ufoc_col = parse_col("#555555");
-    user_config.border_swap_col = parse_col("#fff4c0");
-    user_config.move_window_amt = 10;
-    user_config.resize_window_amt = 10;
-
-    user_config.motion_throttle = 60;
-    user_config.snap_distance = 5;
-    user_config.n_binds = 0;
-    user_config.new_win_focus = True;
-    user_config.warp_cursor = True;
-    user_config.floating_on_top = True;
+static bsp_node_t *bsp_find_leaf(bsp_node_t *node, client_t *c) {
+    if (!node)
+        return NULL;
+    if (node->type == BSP_LEAF)
+        return (node->client == c) ? node : NULL;
+    bsp_node_t *r = bsp_find_leaf(node->first, c);
+    return r ? r : bsp_find_leaf(node->second, c);
 }
 
-Bool is_child_proc(pid_t parent_pid, pid_t child_pid) {
-    if (parent_pid <= 0 || child_pid <= 0)
-        return False;
-
-    char path[PATH_MAX];
-    FILE *f;
-    pid_t current_pid = child_pid;
-    int max_iterations = 20;
-
-    while (current_pid > 1 && max_iterations-- > 0) {
-        snprintf(path, sizeof(path), "/proc/%d/stat", current_pid);
-        f = fopen(path, "r");
-        if (!f) {
-            fprintf(stderr, "tilite: could not open %s\n", path);
-            return False;
-        }
-
-        int ppid = 0;
-        if (fscanf(f, "%*d %*s %*c %d", &ppid) != 1) {
-            fprintf(stderr, "tilite: failed to read ppid from %s\n", path);
-            fclose(f);
-            return False;
-        }
-        fclose(f);
-
-        if (ppid == parent_pid)
-            return True;
-
-        if (ppid <= 1) {
-            fprintf(stderr,
-                    "tilite: reached init/kernel, no relationship found\n");
-            break;
-        }
-        current_pid = ppid;
-    }
-    return False;
+static void bsp_swap_leaves(bsp_node_t *root, client_t *a, client_t *b) {
+    bsp_node_t *la = bsp_find_leaf(root, a);
+    bsp_node_t *lb = bsp_find_leaf(root, b);
+    if (!la || !lb)
+        return;
+    la->client = b;
+    lb->client = a;
 }
 
-void move_focused_next(void) {
+static void move_focused_dir(int dir) {
     if (!focused || !workspaces[current_ws])
         return;
 
-    client_t *prev = NULL;
-    client_t *c = workspaces[current_ws];
-    while (c && c != focused) {
-        prev = c;
-        c = c->next;
-    }
-    if (!c || !c->next)
+    client_t *nb = bsp_find_neighbor(focused, dir);
+    if (!nb)
         return;
 
-    client_t *next = c->next;
-
-    c->next = next->next;
-    next->next = c;
-    if (prev)
-        prev->next = next;
-    else
-        workspaces[current_ws] = next;
+    bsp_swap_leaves(bsp_roots[current_ws], focused, nb);
+    swap_clients(focused, nb);
 
     tile();
     if (user_config.warp_cursor)
@@ -1248,39 +1212,10 @@ void move_focused_next(void) {
     update_borders();
 }
 
-void move_focused_prev(void) {
-    if (!focused || !workspaces[current_ws])
-        return;
-
-    client_t *prev = NULL;
-    client_t *c = workspaces[current_ws];
-    while (c && c != focused) {
-        prev = c;
-        c = c->next;
-    }
-    if (!c || !prev)
-        return;
-
-    client_t *prev_prev = NULL;
-    client_t *p = workspaces[current_ws];
-    while (p && p != prev) {
-        prev_prev = p;
-        p = p->next;
-    }
-
-    prev->next = c->next;
-    c->next = prev;
-    if (prev_prev)
-        prev_prev->next = c;
-    else
-        workspaces[current_ws] = c;
-
-    tile();
-    if (user_config.warp_cursor)
-        warp_cursor(focused);
-    send_wm_take_focus(focused->win);
-    update_borders();
-}
+void move_focused_left(void) { move_focused_dir(0); }
+void move_focused_right(void) { move_focused_dir(1); }
+void move_focused_up(void) { move_focused_dir(2); }
+void move_focused_down(void) { move_focused_dir(3); }
 
 void move_to_workspace(int ws) {
     if (!focused || ws >= NUM_WORKSPACES || ws == current_ws)
@@ -1519,7 +1454,6 @@ void setup(void) {
 
     setup_atoms();
     other_wm();
-    init_defaults();
     load_config();
     update_modifier_masks();
     grab_keys();
@@ -1828,7 +1762,6 @@ void swap_clients(client_t *a, client_t *b) {
     if (!*pa || !*pb)
         return;
 
-    /* if next to it swap */
     if (*pa == b && *pb == a) {
         client_t *tmp = b->next;
         b->next = a;
@@ -1837,7 +1770,6 @@ void swap_clients(client_t *a, client_t *b) {
         return;
     }
 
-    /* full swap */
     client_t *ta = *pa;
     client_t *tb = *pb;
     client_t *ta_next = ta->next;
@@ -1857,15 +1789,6 @@ static bsp_node_t *bsp_make_leaf(client_t *c) {
     n->type = BSP_LEAF;
     n->client = c;
     return n;
-}
-
-static bsp_node_t *bsp_find_leaf(bsp_node_t *node, client_t *c) {
-    if (!node)
-        return NULL;
-    if (node->type == BSP_LEAF)
-        return (node->client == c) ? node : NULL;
-    bsp_node_t *r = bsp_find_leaf(node->first, c);
-    return r ? r : bsp_find_leaf(node->second, c);
 }
 
 bsp_node_t *bsp_insert(bsp_node_t **root, client_t *old_client,
