@@ -265,7 +265,8 @@ void apply_fullscreen(client_t *c, Bool on) {
 
         c->fullscreen = True;
 
-        XSetWindowBorderWidth(dpy, c->win, 0);
+        bsp_remove(&bsp_roots[current_ws], c);
+
         XMoveResizeWindow(dpy, c->win, 0, 0, scr_width, scr_height);
 
         c->x = 0;
@@ -278,6 +279,8 @@ void apply_fullscreen(client_t *c, Bool on) {
                               True);
     } else {
         c->fullscreen = False;
+
+        bsp_insert(&bsp_roots[current_ws], NULL, c);
 
         XMoveResizeWindow(dpy, c->win, c->orig_x, c->orig_y, c->orig_w,
                           c->orig_h);
@@ -976,6 +979,7 @@ void hdl_map_req(XEvent *xev) {
     if (window_has_ewmh_state(w, atoms[ATOM_NET_WM_STATE_FULLSCREEN])) {
         c->fullscreen = True;
         c->floating = False;
+        bsp_remove(&bsp_roots[target_ws], c);
     }
 
     XMapWindow(dpy, w);
