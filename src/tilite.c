@@ -1603,6 +1603,11 @@ int snap_coordinate(int pos, int size, int screen_size, int snap_dist) {
 }
 
 void spawn(const char *const *argv) {
+    // release keyboard to support lock screen keybind
+    XUngrabKeyboard(dpy, CurrentTime);
+    XUngrabPointer(dpy, CurrentTime);
+    XFlush(dpy);
+
     int argc = 0;
     while (argv[argc])
         argc++;
