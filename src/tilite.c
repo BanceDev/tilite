@@ -1570,24 +1570,6 @@ void set_input_focus(client_t *c, Bool raise_win, Bool warp) {
     XFlush(dpy);
 }
 
-void reset_opacity(Window w) {
-    Atom atom = XInternAtom(dpy, "_NET_WM_WINDOW_OPACITY", False);
-    XDeleteProperty(dpy, w, atom);
-}
-
-void set_opacity(Window w, double opacity) {
-    if (opacity < 0.0)
-        opacity = 0.0;
-
-    if (opacity > 1.0)
-        opacity = 1.0;
-
-    unsigned long op = (unsigned long)(opacity * 0xFFFFFFFFu);
-    Atom atom = XInternAtom(dpy, "_NET_WM_WINDOW_OPACITY", False);
-    XChangeProperty(dpy, w, atom, XA_CARDINAL, 32, PropModeReplace,
-                    (unsigned char *)&op, 1);
-}
-
 void set_wm_state(Window w, long state) {
     long data[2] = {state, None}; /* state, icon window */
     XChangeProperty(dpy, w, atoms[ATOM_WM_STATE], atoms[ATOM_WM_STATE], 32,
